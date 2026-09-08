@@ -30,6 +30,24 @@
   --accent-hover: #4f46e5;
   --accent-soft: rgba(99, 102, 241, 0.15);
   --accent-text: #818cf8;
+  
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+.ios-safe-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 1rem);
+}
+
+.ios-safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.75rem);
+}
+
+.ios-safe-main {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem);
 }
 
 .theme-oled {

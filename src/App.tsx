@@ -500,8 +500,8 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col p-4 sm:p-8 md:p-10 max-w-5xl mx-auto w-full overflow-y-auto min-h-screen">
+      {/* Main Content Area with iOS Notch/Island and Bottom Bar padding */}
+      <main className="flex-1 flex flex-col px-4 sm:px-8 md:px-10 ios-safe-main max-w-5xl mx-auto w-full overflow-y-auto min-h-screen">
         <Header
           title={headerInfo.title}
           subtitle={headerInfo.subtitle}
