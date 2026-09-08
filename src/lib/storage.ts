@@ -169,6 +169,8 @@ const getInitialSettings = (): UserSettings => {
     theme: 'dark',
     sync_enabled: true,
     user_id: generateSyncId(),
+    supabase_url: (import.meta as any).env?.VITE_SUPABASE_URL || undefined,
+    supabase_key: (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || undefined,
   };
 };
 
