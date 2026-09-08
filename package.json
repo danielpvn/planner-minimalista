@@ -11,10 +11,10 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "desktop": "cross-env NODE_ENV=development electron electron/main.cjs",
-    "app": "npm run build && electron electron/main.cjs",
-    "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder --win"
+    "desktop": "cross-env NODE_ENV=development ELECTRON=true electron electron/main.cjs",
+    "app": "cross-env ELECTRON=true npm run build && electron electron/main.cjs",
+    "pack": "cross-env ELECTRON=true npm run build && electron-builder --dir",
+    "dist": "cross-env ELECTRON=true npm run build && electron-builder --win"
   },
   "build": {
     "appId": "com.danielpvn.plannerm",
