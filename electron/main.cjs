@@ -62,8 +62,20 @@ function initUpdater() {
   }, 4 * 60 * 60 * 1000);
 }
 
+function getAppIcon() {
+  const ico = path.join(__dirname, '../public/icon.ico');
+  const png = path.join(__dirname, '../public/icon-256.png');
+  if (process.platform === 'win32' && fs.existsSync(ico)) {
+    return nativeImage.createFromPath(ico);
+  }
+  if (fs.existsSync(png)) {
+    return nativeImage.createFromPath(png);
+  }
+  return nativeImage.createFromPath(ico);
+}
+
 function createWindow() {
-  const appIcon = nativeImage.createFromPath(fs.existsSync(iconPath) ? iconPath : icoPath);
+  const appIcon = getAppIcon();
 
   mainWindow = new BrowserWindow({
     width: 1180,
@@ -114,7 +126,7 @@ function createWindow() {
 
 function createTray() {
   try {
-    const trayIcon = nativeImage.createFromPath(fs.existsSync(iconPath) ? iconPath : icoPath);
+    const trayIcon = getAppIcon();
     tray = new Tray(trayIcon);
     tray.setToolTip('Plannerm');
 

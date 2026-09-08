@@ -78,6 +78,7 @@
     "electron": "^44.2.0",
     "electron-builder": "^26.15.3",
     "oxlint": "^1.79.0",
+    "png-to-ico": "^3.0.2",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
