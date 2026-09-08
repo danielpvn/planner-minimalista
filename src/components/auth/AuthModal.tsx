@@ -76,9 +76,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMsg(null);
     try {
       const { error } = await AuthServices.signInWithGoogle();
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('provider') || error.message?.includes('disabled') || error.message?.includes('not enabled')) {
+          throw new Error('O login com Google precisa ser ativado em: Supabase > Authentication > Providers. Você já pode criar sua conta por E-mail e Senha ou Link Mágico logo abaixo!');
+        }
+        throw error;
+      }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Falha ao autenticar com Google.');
+      setErrorMsg(err.message || 'Falha ao autenticar com Google. Tente entrar com E-mail ou Link Mágico.');
       setLoading(false);
     }
   };
