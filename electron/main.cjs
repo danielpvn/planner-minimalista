@@ -9,7 +9,7 @@ try {
 }
 
 // Set Windows AppUserModelId so Taskbar displays our custom icon instead of Electron atom
-const APP_ID = 'com.danielpvn.plannerm';
+const APP_ID = 'com.daniel.plannerm';
 app.setAppUserModelId(APP_ID);
 app.setName('Plannerm');
 

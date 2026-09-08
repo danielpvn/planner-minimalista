@@ -17,7 +17,7 @@
     "dist": "cross-env ELECTRON=true npm run build && electron-builder --win"
   },
   "build": {
-    "appId": "com.danielpvn.plannerm",
+    "appId": "com.daniel.plannerm",
     "productName": "Plannerm",
     "directories": {
       "output": "release"
