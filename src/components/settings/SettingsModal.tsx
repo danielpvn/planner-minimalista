@@ -274,45 +274,51 @@ ALTER PUBLICATION supabase_realtime ADD TABLE habits;
           </button>
         </div>
 
-        {/* Supabase Config Fields */}
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Supabase Project URL (Opcional)
-            </label>
-            <input
-              type="text"
-              value={supabaseUrl}
-              onChange={(e) => setSupabaseUrl(e.target.value)}
-              placeholder="https://xyzcompany.supabase.co"
-              className="w-full px-4 py-2 rounded-xl bg-background border border-surface-border text-foreground text-xs font-mono focus:outline-none focus:border-accent"
-            />
-          </div>
+        {/* Advanced Developer Settings (Collapsed) */}
+        <details className="group pt-2">
+          <summary className="text-xs text-muted-foreground hover:text-foreground cursor-pointer font-medium select-none flex items-center gap-1.5 transition-colors">
+            <span>⚙️ Configuração Avançada (Banco Supabase Próprio)</span>
+          </summary>
+          
+          <div className="mt-3 space-y-3 p-3.5 rounded-2xl bg-background/50 border border-surface-border/60">
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                Supabase Project URL
+              </label>
+              <input
+                type="text"
+                value={supabaseUrl}
+                onChange={(e) => setSupabaseUrl(e.target.value)}
+                placeholder="https://xyzcompany.supabase.co"
+                className="w-full px-3 py-1.5 rounded-xl bg-background border border-surface-border text-foreground text-xs font-mono focus:outline-none focus:border-accent"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Supabase Anon Public Key (Opcional)
-            </label>
-            <input
-              type="password"
-              value={supabaseKey}
-              onChange={(e) => setSupabaseKey(e.target.value)}
-              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-              className="w-full px-4 py-2 rounded-xl bg-background border border-surface-border text-foreground text-xs font-mono focus:outline-none focus:border-accent"
-            />
-          </div>
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                Supabase Anon Public Key
+              </label>
+              <input
+                type="password"
+                value={supabaseKey}
+                onChange={(e) => setSupabaseKey(e.target.value)}
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                className="w-full px-3 py-1.5 rounded-xl bg-background border border-surface-border text-foreground text-xs font-mono focus:outline-none focus:border-accent"
+              />
+            </div>
 
-          <div className="pt-1 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={copySql}
-              className="text-xs text-accent-text hover:underline font-medium flex items-center gap-1.5"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span>{copiedSql ? 'SQL Copiado com Sucesso!' : 'Copiar SQL das Tabelas para o Supabase'}</span>
-            </button>
+            <div className="pt-1 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={copySql}
+                className="text-[11px] text-accent-text hover:underline font-medium flex items-center gap-1.5"
+              >
+                <Copy className="w-3 h-3" />
+                <span>{copiedSql ? 'SQL Copiado com Sucesso!' : 'Copiar SQL das Tabelas'}</span>
+              </button>
+            </div>
           </div>
-        </div>
+        </details>
       </div>
 
       {/* Section 3: Appearance & Sound */}

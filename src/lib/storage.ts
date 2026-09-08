@@ -161,6 +161,9 @@ const getInitialHabits = (): Habit[] => {
   ];
 };
 
+const DEFAULT_SUPABASE_URL = 'https://dnyigcjihzimgsqeeccb.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_ZyFtdqGfJ4uhuIT6XN60vQ_zvBGfJC_';
+
 const getInitialSettings = (): UserSettings => {
   return {
     daily_cutoff_time: '21:00',
@@ -169,8 +172,8 @@ const getInitialSettings = (): UserSettings => {
     theme: 'dark',
     sync_enabled: true,
     user_id: generateSyncId(),
-    supabase_url: (import.meta as any).env?.VITE_SUPABASE_URL || undefined,
-    supabase_key: (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || undefined,
+    supabase_url: (import.meta as any).env?.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL,
+    supabase_key: (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY,
   };
 };
 
@@ -249,7 +252,14 @@ export const Storage = {
         Storage.saveSettings(initial);
         return initial;
       }
-      return { ...getInitialSettings(), ...JSON.parse(data) };
+      const parsed = JSON.parse(data);
+      // Auto-heal old typo URL if present in localStorage
+      if (!parsed.supabase_url || parsed.supabase_url.includes('dnyigcjlhzmgsrqeeccb')) {
+        parsed.supabase_url = DEFAULT_SUPABASE_URL;
+        parsed.supabase_key = DEFAULT_SUPABASE_KEY;
+        Storage.saveSettings({ ...getInitialSettings(), ...parsed });
+      }
+      return { ...getInitialSettings(), ...parsed };
     } catch {
       return getInitialSettings();
     }
