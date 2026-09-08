@@ -16,7 +16,7 @@ function createWindow() {
     title: 'Planner Minimalista',
     autoHideMenuBar: true,
     show: false,
-    icon: path.join(__dirname, '../public/icon.svg'),
+    icon: path.join(__dirname, '../public/icon.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -53,7 +53,7 @@ function createWindow() {
 
 function createTray() {
   try {
-    const iconPath = path.join(__dirname, '../public/icon.svg');
+    const iconPath = path.join(__dirname, '../public/icon.ico');
     tray = new Tray(iconPath);
     tray.setToolTip('Planner Minimalista');
 
