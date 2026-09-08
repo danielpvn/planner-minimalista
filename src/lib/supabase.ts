@@ -51,12 +51,25 @@ export const AuthServices = {
 
   async signInWithGoogle() {
     if (!supabaseClient) throw new Error('Supabase não configurado.');
-    return await supabaseClient.auth.signInWithOAuth({
+    const isElectron = typeof window !== 'undefined' && ((window as any).electronAPI?.isElectron || window.location.protocol === 'file:');
+    const redirectTo = 'https://plannerm.vercel.app';
+
+    const res = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        redirectTo,
+        skipBrowserRedirect: isElectron,
       },
     });
+
+    if (isElectron && res.data?.url) {
+      if ((window as any).electronAPI?.openExternal) {
+        (window as any).electronAPI.openExternal(res.data.url);
+      } else {
+        window.open(res.data.url, '_blank');
+      }
+    }
+    return res;
   },
 
   async signOut() {

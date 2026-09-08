@@ -1,6 +1,13 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, dialog } = require('electron');
+const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, dialog, shell, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+
+ipcMain.on('open-external', (_event, url) => {
+  if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+    shell.openExternal(url);
+  }
+});
+
 let autoUpdater = null;
 try {
   autoUpdater = require('electron-updater').autoUpdater;
@@ -109,10 +116,19 @@ function createWindow() {
     });
   }
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.setIcon(appIcon);
-    mainWindow.show();
-    mainWindow.focus();
+  // Open external links and OAuth redirects in user's default browser (Chrome/Edge)
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      if (!url.includes('localhost') && !url.includes('127.0.0.1')) {
+        event.preventDefault();
+        shell.openExternal(url);
+      }
+    }
   });
 
   // Minimize to tray on close
