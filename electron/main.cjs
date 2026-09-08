@@ -1,28 +1,40 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut } = require('electron');
+const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+
+// Set Windows AppUserModelId so Taskbar displays our custom icon instead of Electron atom
+const APP_ID = 'com.danielpvn.plannerm';
+app.setAppUserModelId(APP_ID);
+app.setName('Plannerm');
 
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
 
+const iconPath = path.join(__dirname, '../public/icon-256.png');
+const icoPath = path.join(__dirname, '../public/icon.ico');
+
 function createWindow() {
+  const appIcon = nativeImage.createFromPath(fs.existsSync(iconPath) ? iconPath : icoPath);
+
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 800,
     minWidth: 880,
     minHeight: 620,
     backgroundColor: '#090a0f',
-    title: 'Planner Minimalista',
+    title: 'Plannerm',
     autoHideMenuBar: true,
     show: false,
-    icon: path.join(__dirname, '../public/icon.ico'),
+    icon: appIcon,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
+
+  mainWindow.setIcon(appIcon);
 
   const distHtml = path.join(__dirname, '../dist/index.html');
 
@@ -38,6 +50,7 @@ function createWindow() {
   }
 
   mainWindow.once('ready-to-show', () => {
+    mainWindow.setIcon(appIcon);
     mainWindow.show();
     mainWindow.focus();
   });
@@ -53,16 +66,16 @@ function createWindow() {
 
 function createTray() {
   try {
-    const iconPath = path.join(__dirname, '../public/icon.ico');
-    tray = new Tray(iconPath);
-    tray.setToolTip('Planner Minimalista');
+    const trayIcon = nativeImage.createFromPath(fs.existsSync(iconPath) ? iconPath : icoPath);
+    tray = new Tray(trayIcon);
+    tray.setToolTip('Plannerm');
 
     const updateContextMenu = () => {
       const isAutoStart = app.getLoginItemSettings().openAtLogin;
 
       const contextMenu = Menu.buildFromTemplate([
         {
-          label: 'Abrir Planner',
+          label: 'Abrir Plannerm',
           click: () => {
             if (mainWindow) {
               mainWindow.show();
@@ -84,7 +97,7 @@ function createTray() {
         },
         { type: 'separator' },
         {
-          label: 'Sair do Planner',
+          label: 'Sair do Plannerm',
           click: () => {
             isQuitting = true;
             app.quit();
