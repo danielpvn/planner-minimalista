@@ -1,6 +1,6 @@
 {
-  "name": "Planner Minimalista",
-  "short_name": "Planner",
+  "name": "Plannerm — Minimalista",
+  "short_name": "Plannerm",
   "description": "Seu planejador diário minimalista e metas de vida com sincronização em tempo real.",
   "start_url": "/",
   "display": "standalone",
@@ -9,20 +9,27 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "categories": ["productivity", "utilities"]

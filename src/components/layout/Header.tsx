@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Bell, BellOff, Sparkles } from 'lucide-react';
+import { Plus, Bell, BellOff, Sparkles, User } from 'lucide-react';
 
 interface HeaderProps {
   title: string;
@@ -8,6 +8,8 @@ interface HeaderProps {
   notificationsEnabled: boolean;
   onToggleNotifications: () => void;
   progressPercent?: number;
+  user?: any | null;
+  onOpenAuth?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +19,8 @@ export const Header: React.FC<HeaderProps> = ({
   notificationsEnabled,
   onToggleNotifications,
   progressPercent,
+  user,
+  onOpenAuth,
 }) => {
   return (
     <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-surface-border select-none">
@@ -40,6 +44,23 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+        {/* Mobile User Profile Button */}
+        {onOpenAuth && (
+          <button
+            onClick={onOpenAuth}
+            title={user ? `Logado como ${user.email}` : 'Entrar / Criar Conta'}
+            className="md:hidden p-2.5 rounded-xl border border-surface-border bg-surface hover:bg-surface-hover text-foreground transition-all"
+          >
+            {user ? (
+              <span className="w-4 h-4 rounded-full bg-accent text-white flex items-center justify-center text-[10px] font-bold">
+                {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+              </span>
+            ) : (
+              <User className="w-4 h-4 text-accent-text" />
+            )}
+          </button>
+        )}
+
         {/* Notification toggle button */}
         <button
           onClick={onToggleNotifications}

@@ -1,6 +1,12 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+let autoUpdater = null;
+try {
+  autoUpdater = require('electron-updater').autoUpdater;
+} catch {
+  // updater not available in dev or missing
+}
 
 // Set Windows AppUserModelId so Taskbar displays our custom icon instead of Electron atom
 const APP_ID = 'com.danielpvn.plannerm';
@@ -13,6 +19,48 @@ let isQuitting = false;
 
 const iconPath = path.join(__dirname, '../public/icon-256.png');
 const icoPath = path.join(__dirname, '../public/icon.ico');
+
+function initUpdater() {
+  if (!autoUpdater || !app.isPackaged) return;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    if (mainWindow) {
+      mainWindow.webContents.send('update-available', info);
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Atualização Pronta',
+      message: `Uma nova versão (${info.version}) do Plannerm foi baixada!`,
+      detail: 'Deseja reiniciar o aplicativo agora para aplicar a atualização?',
+      buttons: ['Reiniciar e Atualizar', 'Mais tarde'],
+      defaultId: 0,
+      cancelId: 1,
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.log('Erro ao verificar atualizações:', err?.message || err);
+  });
+
+  // Check periodically (every 4 hours)
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(() => {});
+  }, 10000);
+
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch(() => {});
+  }, 4 * 60 * 60 * 1000);
+}
 
 function createWindow() {
   const appIcon = nativeImage.createFromPath(fs.existsSync(iconPath) ? iconPath : icoPath);
@@ -95,6 +143,34 @@ function createTray() {
             updateContextMenu();
           },
         },
+        {
+          label: 'Verificar atualizações...',
+          click: () => {
+            if (autoUpdater && app.isPackaged) {
+              autoUpdater.checkForUpdates().then((result) => {
+                if (!result || !result.updateInfo || result.updateInfo.version === app.getVersion()) {
+                  dialog.showMessageBox({
+                    type: 'info',
+                    title: 'Plannerm Atualizado',
+                    message: `Você já está na versão mais recente (${app.getVersion()})!`,
+                  });
+                }
+              }).catch(() => {
+                dialog.showMessageBox({
+                  type: 'info',
+                  title: 'Atualizações',
+                  message: 'Não foi possível verificar no momento. Verifique sua conexão.',
+                });
+              });
+            } else {
+              dialog.showMessageBox({
+                type: 'info',
+                title: 'Plannerm',
+                message: `Versão ${app.getVersion()} (Ambiente Local/Dev)`,
+              });
+            }
+          },
+        },
         { type: 'separator' },
         {
           label: 'Sair do Plannerm',
@@ -141,6 +217,7 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     createWindow();
     createTray();
+    initUpdater();
 
     globalShortcut.register('CommandOrControl+Alt+P', () => {
       if (mainWindow) {

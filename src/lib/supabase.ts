@@ -27,6 +27,61 @@ export const initSupabase = (url?: string, key?: string): SupabaseClient | null 
 
 export const getSupabase = (): SupabaseClient | null => supabaseClient;
 
+// Authentication Services
+export const AuthServices = {
+  async signInWithEmail(email: string, password: string) {
+    if (!supabaseClient) throw new Error('Supabase não configurado.');
+    return await supabaseClient.auth.signInWithPassword({ email, password });
+  },
+
+  async signUpWithEmail(email: string, password: string) {
+    if (!supabaseClient) throw new Error('Supabase não configurado.');
+    return await supabaseClient.auth.signUp({ email, password });
+  },
+
+  async signInWithMagicLink(email: string) {
+    if (!supabaseClient) throw new Error('Supabase não configurado.');
+    return await supabaseClient.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+      },
+    });
+  },
+
+  async signInWithGoogle() {
+    if (!supabaseClient) throw new Error('Supabase não configurado.');
+    return await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+      },
+    });
+  },
+
+  async signOut() {
+    if (!supabaseClient) return;
+    return await supabaseClient.auth.signOut();
+  },
+
+  async getUser() {
+    if (!supabaseClient) return null;
+    const { data } = await supabaseClient.auth.getUser();
+    return data.user;
+  },
+
+  async getSession() {
+    if (!supabaseClient) return null;
+    const { data } = await supabaseClient.auth.getSession();
+    return data.session;
+  },
+
+  onAuthStateChange(callback: (event: string, session: any) => void) {
+    if (!supabaseClient) return { data: { subscription: { unsubscribe: () => {} } } };
+    return supabaseClient.auth.onAuthStateChange(callback);
+  },
+};
+
 // Sync service that handles cloud pull/push and realtime listener
 export class CloudSync {
   private static listeners: Array<(status: 'synced' | 'syncing' | 'offline' | 'error') => void> = [];

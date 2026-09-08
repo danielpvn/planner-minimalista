@@ -9,7 +9,7 @@ import type {
 } from './types';
 import { Storage } from './lib/storage';
 import { NotificationManager } from './lib/notifications';
-import { initSupabase, CloudSync } from './lib/supabase';
+import { initSupabase, CloudSync, AuthServices } from './lib/supabase';
 import { Navbar } from './components/layout/Navbar';
 import { Header } from './components/layout/Header';
 import { DailyPlanner } from './components/today/DailyPlanner';
@@ -19,6 +19,7 @@ import { HabitTracker } from './components/habits/HabitTracker';
 import { FocusTimer } from './components/focus/FocusTimer';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { TaskModal } from './components/modals/TaskModal';
+import { AuthModal } from './components/auth/AuthModal';
 
 export const App: React.FC = () => {
   // State Initialization
@@ -26,6 +27,7 @@ export const App: React.FC = () => {
   const [lifeGoals, setLifeGoals] = useState<LifeGoal[]>(() => Storage.getLifeGoals());
   const [habits, setHabits] = useState<Habit[]>(() => Storage.getHabits());
   const [settings, setSettings] = useState<UserSettings>(() => Storage.getSettings());
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
 
   const [currentView, setCurrentView] = useState<ViewMode>('today');
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -33,10 +35,14 @@ export const App: React.FC = () => {
   );
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
 
-  // Task Modal state
+  // Modals state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [modalDate, setModalDate] = useState<string>(selectedDate);
+
+  // Active sync user ID (either logged in user UUID or guest pairing ID)
+  const activeUserId = currentUser?.id || settings.user_id;
 
   // Apply Theme
   useEffect(() => {
@@ -49,12 +55,57 @@ export const App: React.FC = () => {
     }
   }, [settings.theme]);
 
-  // Initialize Supabase if keys provided
+  // Initialize Supabase & Auth Listener
   useEffect(() => {
     if (settings.supabase_url && settings.supabase_key) {
       initSupabase(settings.supabase_url, settings.supabase_key);
-      // Pull initial cloud data
-      CloudSync.pullAll(settings.user_id).then((cloudData) => {
+
+      // Check active auth session
+      AuthServices.getSession().then((session) => {
+        if (session?.user) {
+          setCurrentUser(session.user);
+        }
+      });
+
+      const { data: authListener } = AuthServices.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          setCurrentUser(session.user);
+          // Pull user cloud data
+          CloudSync.pullAll(session.user.id).then((cloudData) => {
+            if (cloudData) {
+              if (cloudData.tasks && cloudData.tasks.length > 0) {
+                setTasks(cloudData.tasks);
+                Storage.saveTasks(cloudData.tasks);
+              } else {
+                // First login: upload local tasks to cloud account
+                const currentTasks = Storage.getTasks();
+                CloudSync.pushTasks(currentTasks, session.user.id);
+              }
+
+              if (cloudData.lifeGoals && cloudData.lifeGoals.length > 0) {
+                setLifeGoals(cloudData.lifeGoals);
+                Storage.saveLifeGoals(cloudData.lifeGoals);
+              } else {
+                const currentGoals = Storage.getLifeGoals();
+                CloudSync.pushLifeGoals(currentGoals, session.user.id);
+              }
+
+              if (cloudData.habits && cloudData.habits.length > 0) {
+                setHabits(cloudData.habits);
+                Storage.saveHabits(cloudData.habits);
+              } else {
+                const currentHabits = Storage.getHabits();
+                CloudSync.pushHabits(currentHabits, session.user.id);
+              }
+            }
+          });
+        } else {
+          setCurrentUser(null);
+        }
+      });
+
+      // Initial cloud pull
+      CloudSync.pullAll(activeUserId).then((cloudData) => {
         if (cloudData) {
           if (cloudData.tasks) {
             setTasks(cloudData.tasks);
@@ -73,7 +124,7 @@ export const App: React.FC = () => {
 
       // Subscribe to realtime updates
       const unsubscribe = CloudSync.subscribeRealtime(
-        settings.user_id,
+        activeUserId,
         (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             setTasks((prev) => {
@@ -106,13 +157,14 @@ export const App: React.FC = () => {
 
       const unsubStatus = CloudSync.subscribeStatus(setSyncStatus);
       return () => {
+        authListener?.subscription?.unsubscribe();
         unsubscribe();
         unsubStatus();
       };
     } else {
       setSyncStatus('offline');
     }
-  }, [settings.supabase_url, settings.supabase_key, settings.user_id]);
+  }, [settings.supabase_url, settings.supabase_key, activeUserId]);
 
   // Periodic Reminder & Cutoff Alarm Checks
   useEffect(() => {
@@ -123,16 +175,15 @@ export const App: React.FC = () => {
       NotificationManager.checkTaskDeadlines(tasks);
     };
 
-    checkAlarms(); // Check immediately on mount
-    const interval = setInterval(checkAlarms, 30000); // Check every 30 seconds
+    checkAlarms();
+    const interval = setInterval(checkAlarms, 30000);
 
     return () => clearInterval(interval);
   }, [tasks, settings.daily_cutoff_time, settings.notifications_enabled]);
 
-  // Global Keyboard Shortcuts (N for New Task, 1-5 for views)
+  // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger when user is typing in inputs or textareas
       const target = e.target as HTMLElement;
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
 
@@ -173,17 +224,16 @@ export const App: React.FC = () => {
         return task;
       });
       Storage.saveTasks(updated);
-      CloudSync.pushTasks(updated, settings.user_id);
+      CloudSync.pushTasks(updated, activeUserId);
       return updated;
     });
-  }, [settings.user_id]);
+  }, [activeUserId]);
 
   const handleSaveTask = useCallback(
     (taskData: Omit<Task, 'id' | 'completed' | 'created_at'> & { id?: string }) => {
       setTasks((prev) => {
         let updated: Task[];
         if (taskData.id) {
-          // Edit existing
           updated = prev.map((t) =>
             t.id === taskData.id
               ? {
@@ -193,7 +243,6 @@ export const App: React.FC = () => {
               : t
           );
         } else {
-          // Create new
           const newTask: Task = {
             id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             title: taskData.title,
@@ -209,21 +258,21 @@ export const App: React.FC = () => {
         }
 
         Storage.saveTasks(updated);
-        CloudSync.pushTasks(updated, settings.user_id);
+        CloudSync.pushTasks(updated, activeUserId);
         return updated;
       });
     },
-    [settings.user_id]
+    [activeUserId]
   );
 
   const handleDeleteTask = useCallback((id: string) => {
     setTasks((prev) => {
       const updated = prev.filter((t) => t.id !== id);
       Storage.saveTasks(updated);
-      CloudSync.pushTasks(updated, settings.user_id);
+      CloudSync.pushTasks(updated, activeUserId);
       return updated;
     });
-  }, [settings.user_id]);
+  }, [activeUserId]);
 
   const handleQuickAddTask = useCallback(
     (title: string, priority: PriorityLevel, time?: string) => {
@@ -242,9 +291,9 @@ export const App: React.FC = () => {
     (reorderedTasks: Task[]) => {
       setTasks(reorderedTasks);
       Storage.saveTasks(reorderedTasks);
-      CloudSync.pushTasks(reorderedTasks, settings.user_id);
+      CloudSync.pushTasks(reorderedTasks, activeUserId);
     },
-    [settings.user_id]
+    [activeUserId]
   );
 
   // Life Goals Handlers
@@ -258,38 +307,38 @@ export const App: React.FC = () => {
         };
         const updated = [newGoal, ...prev];
         Storage.saveLifeGoals(updated);
-        CloudSync.pushLifeGoals(updated, settings.user_id);
+        CloudSync.pushLifeGoals(updated, activeUserId);
         return updated;
       });
     },
-    [settings.user_id]
+    [activeUserId]
   );
 
   const handleUpdateLifeGoal = useCallback((updatedGoal: LifeGoal) => {
     setLifeGoals((prev) => {
       const updated = prev.map((g) => (g.id === updatedGoal.id ? updatedGoal : g));
       Storage.saveLifeGoals(updated);
-      CloudSync.pushLifeGoals(updated, settings.user_id);
+      CloudSync.pushLifeGoals(updated, activeUserId);
       return updated;
     });
-  }, [settings.user_id]);
+  }, [activeUserId]);
 
   const handleDeleteLifeGoal = useCallback((id: string) => {
     setLifeGoals((prev) => {
       const updated = prev.filter((g) => g.id !== id);
       Storage.saveLifeGoals(updated);
-      CloudSync.pushLifeGoals(updated, settings.user_id);
+      CloudSync.pushLifeGoals(updated, activeUserId);
       return updated;
     });
-  }, [settings.user_id]);
+  }, [activeUserId]);
 
   const handleReorderLifeGoals = useCallback(
     (reorderedGoals: LifeGoal[]) => {
       setLifeGoals(reorderedGoals);
       Storage.saveLifeGoals(reorderedGoals);
-      CloudSync.pushLifeGoals(reorderedGoals, settings.user_id);
+      CloudSync.pushLifeGoals(reorderedGoals, activeUserId);
     },
-    [settings.user_id]
+    [activeUserId]
   );
 
   const handleSendMilestoneToToday = useCallback(
@@ -318,11 +367,11 @@ export const App: React.FC = () => {
         };
         const updated = [newHabit, ...prev];
         Storage.saveHabits(updated);
-        CloudSync.pushHabits(updated, settings.user_id);
+        CloudSync.pushHabits(updated, activeUserId);
         return updated;
       });
     },
-    [settings.user_id]
+    [activeUserId]
   );
 
   const handleToggleHabitForToday = useCallback((id: string) => {
@@ -344,27 +393,27 @@ export const App: React.FC = () => {
         return h;
       });
       Storage.saveHabits(updated);
-      CloudSync.pushHabits(updated, settings.user_id);
+      CloudSync.pushHabits(updated, activeUserId);
       return updated;
     });
-  }, [settings.user_id]);
+  }, [activeUserId]);
 
   const handleDeleteHabit = useCallback((id: string) => {
     setHabits((prev) => {
       const updated = prev.filter((h) => h.id !== id);
       Storage.saveHabits(updated);
-      CloudSync.pushHabits(updated, settings.user_id);
+      CloudSync.pushHabits(updated, activeUserId);
       return updated;
     });
-  }, [settings.user_id]);
+  }, [activeUserId]);
 
   const handleReorderHabits = useCallback(
     (reorderedHabits: Habit[]) => {
       setHabits(reorderedHabits);
       Storage.saveHabits(reorderedHabits);
-      CloudSync.pushHabits(reorderedHabits, settings.user_id);
+      CloudSync.pushHabits(reorderedHabits, activeUserId);
     },
-    [settings.user_id]
+    [activeUserId]
   );
 
   // Settings Handlers
@@ -388,6 +437,11 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await AuthServices.signOut();
+    setCurrentUser(null);
+  };
+
   // Stats for Header
   const todayStr = new Date().toISOString().split('T')[0];
   const todayTasks = tasks.filter((t) => t.date === todayStr);
@@ -396,7 +450,6 @@ export const App: React.FC = () => {
   const progressPercent =
     todayTasks.length > 0 ? Math.round((todayCompletedCount / todayTasks.length) * 100) : 0;
 
-  // View titles & subtitles
   const getHeaderInfo = () => {
     switch (currentView) {
       case 'today':
@@ -442,6 +495,9 @@ export const App: React.FC = () => {
         onViewChange={setCurrentView}
         syncStatus={syncStatus}
         todayPendingCount={todayPendingCount}
+        user={currentUser}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -457,6 +513,8 @@ export const App: React.FC = () => {
           notificationsEnabled={settings.notifications_enabled}
           onToggleNotifications={handleToggleNotifications}
           progressPercent={currentView === 'today' ? progressPercent : undefined}
+          user={currentUser}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
         />
 
         {/* View Router */}
@@ -552,6 +610,15 @@ export const App: React.FC = () => {
         onSave={handleSaveTask}
         editingTask={editingTask}
         defaultDate={modalDate}
+      />
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={(user) => {
+          setCurrentUser(user);
+        }}
       />
     </div>
   );

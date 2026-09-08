@@ -1,7 +1,9 @@
 {
-  "name": "planner",
+  "name": "plannerm",
   "private": true,
   "version": "1.0.0",
+  "description": "Plannerm - Minimalist Daily Planner & Life Roadmap",
+  "author": "Daniel",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -10,13 +12,54 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "desktop": "cross-env NODE_ENV=development electron electron/main.cjs",
-    "app": "npm run build && electron electron/main.cjs"
+    "app": "npm run build && electron electron/main.cjs",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.danielpvn.plannerm",
+    "productName": "Plannerm",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/icon-256.png",
+      "public/icon.ico"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.ico",
+      "artifactName": "Plannerm-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Plannerm",
+      "runAfterFinish": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "danielpvn",
+      "repo": "planner-minimalista"
+    }
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^1.43.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -33,6 +76,7 @@
     "autoprefixer": "^10.5.5",
     "cross-env": "^10.1.0",
     "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
     "oxlint": "^1.79.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
