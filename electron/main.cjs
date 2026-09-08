@@ -1,17 +1,16 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, globalShortcut } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
 
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1150,
-    height: 780,
-    minWidth: 860,
+    width: 1180,
+    height: 800,
+    minWidth: 880,
     minHeight: 620,
     backgroundColor: '#090a0f',
     title: 'Planner Minimalista',
@@ -25,17 +24,25 @@ function createWindow() {
     },
   });
 
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
+  const distHtml = path.join(__dirname, '../dist/index.html');
+
+  if (process.env.VITE_DEV_SERVER_URL) {
+    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+  } else if (fs.existsSync(distHtml)) {
+    mainWindow.loadFile(distHtml);
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadURL('http://localhost:5173').catch(() => {
+      console.log('Tentando carregar dist...');
+      mainWindow.loadFile(distHtml);
+    });
   }
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    mainWindow.focus();
   });
 
-  // Minimize to tray instead of closing completely
+  // Minimize to tray on close
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
       event.preventDefault();
@@ -105,7 +112,7 @@ function createTray() {
   }
 }
 
-// Register single instance lock
+// Single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -122,7 +129,6 @@ if (!gotTheLock) {
     createWindow();
     createTray();
 
-    // Global shortcut Ctrl+Alt+P to quick summon the planner
     globalShortcut.register('CommandOrControl+Alt+P', () => {
       if (mainWindow) {
         if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
@@ -140,7 +146,6 @@ if (!gotTheLock) {
   });
 }
 
-// Clean exit
 app.on('before-quit', () => {
   isQuitting = true;
 });
