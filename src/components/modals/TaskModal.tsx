@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, Calendar, AlertCircle, Tag } from 'lucide-react';
 import type { Task, PriorityLevel } from '../../types';
+import { getTodayString } from '../../lib/dates';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(defaultDate || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(defaultDate || getTodayString());
   const [time, setTime] = useState('');
   const [priority, setPriority] = useState<PriorityLevel>('medium');
   const [category, setCategory] = useState('Pessoal');
@@ -37,7 +38,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     } else {
       setTitle('');
       setDescription('');
-      setDate(defaultDate || new Date().toISOString().split('T')[0]);
+      setDate(defaultDate || getTodayString());
       setTime('');
       setPriority('medium');
       setCategory('Pessoal');

@@ -8,6 +8,7 @@ import type {
   PriorityLevel 
 } from './types';
 import { Storage } from './lib/storage';
+import { getTodayString } from './lib/dates';
 import { NotificationManager } from './lib/notifications';
 import { initSupabase, CloudSync, AuthServices } from './lib/supabase';
 import { Navbar } from './components/layout/Navbar';
@@ -30,9 +31,7 @@ export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any | null>(null);
 
   const [currentView, setCurrentView] = useState<ViewMode>('today');
-  const [selectedDate, setSelectedDate] = useState<string>(
-    () => new Date().toISOString().split('T')[0]
-  );
+  const [selectedDate, setSelectedDate] = useState<string>(() => getTodayString());
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
 
   // Modals state
@@ -343,7 +342,7 @@ export const App: React.FC = () => {
 
   const handleSendMilestoneToToday = useCallback(
     (title: string, category?: string) => {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getTodayString();
       handleSaveTask({
         title,
         priority: 'high',
@@ -375,7 +374,7 @@ export const App: React.FC = () => {
   );
 
   const handleToggleHabitForToday = useCallback((id: string) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayString();
     setHabits((prev) => {
       const updated = prev.map((h) => {
         if (h.id === id) {
@@ -443,7 +442,7 @@ export const App: React.FC = () => {
   };
 
   // Stats for Header
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayString();
   const todayTasks = tasks.filter((t) => t.date === todayStr);
   const todayPendingCount = todayTasks.filter((t) => !t.completed).length;
   const todayCompletedCount = todayTasks.filter((t) => t.completed).length;

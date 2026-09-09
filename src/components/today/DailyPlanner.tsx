@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { Task, PriorityLevel } from '../../types';
 import { TaskItem } from './TaskItem';
+import { getTodayString, addDaysToDateString, formatFriendlyDate } from '../../lib/dates';
 
 interface DailyPlannerProps {
   tasks: Task[];
@@ -56,20 +57,12 @@ export const DailyPlanner: React.FC<DailyPlannerProps> = ({
 
   // Navigation helpers
   const shiftDate = (days: number) => {
-    const current = new Date(selectedDate + 'T00:00:00');
-    current.setDate(current.getDate() + days);
-    onDateChange(current.toISOString().split('T')[0]);
+    onDateChange(addDaysToDateString(selectedDate, days));
   };
 
-  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === getTodayString();
 
-  const formatDateTitle = (dateStr: string) => {
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
-    const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' });
-    const dayAndMonth = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
-    return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${dayAndMonth}`;
-  };
+  const formatDateTitle = (dateStr: string) => formatFriendlyDate(dateStr);
 
   const handleQuickSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,9 +73,7 @@ export const DailyPlanner: React.FC<DailyPlannerProps> = ({
   };
 
   const handlePostponeTomorrow = (task: Task) => {
-    const current = new Date(selectedDate + 'T00:00:00');
-    current.setDate(current.getDate() + 1);
-    const tomorrowStr = current.toISOString().split('T')[0];
+    const tomorrowStr = addDaysToDateString(selectedDate, 1);
     onEditTask({ ...task, date: tomorrowStr });
   };
 
@@ -159,7 +150,7 @@ export const DailyPlanner: React.FC<DailyPlannerProps> = ({
         <div className="flex items-center gap-1">
           {!isToday && (
             <button
-              onClick={() => onDateChange(new Date().toISOString().split('T')[0])}
+              onClick={() => onDateChange(getTodayString())}
               className="hidden sm:inline-flex text-xs px-2.5 py-1 rounded-lg bg-surface-hover hover:bg-muted text-foreground font-medium transition-colors mr-1"
             >
               Voltar para Hoje

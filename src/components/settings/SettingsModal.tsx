@@ -16,6 +16,7 @@ import {
 import type { UserSettings } from '../../types';
 import { NotificationManager } from '../../lib/notifications';
 import { Storage } from '../../lib/storage';
+import { getTodayString } from '../../lib/dates';
 
 interface SettingsModalProps {
   settings: UserSettings;
@@ -64,7 +65,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `planner-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `planner-backup-${getTodayString()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

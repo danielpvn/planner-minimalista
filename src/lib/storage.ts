@@ -1,4 +1,5 @@
 import type { Task, LifeGoal, Habit, UserSettings } from '../types';
+import { getTodayString } from './dates';
 
 const STORAGE_KEYS = {
   TASKS: 'planner_tasks_v1',
@@ -19,7 +20,7 @@ export const generateSyncId = (): string => {
 
 // Default initial tasks and goals for a fantastic first-time experience
 const getInitialTasks = (): Task[] => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayString();
   return [
     {
       id: 'task-1',

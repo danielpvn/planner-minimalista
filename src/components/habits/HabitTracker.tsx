@@ -3,6 +3,7 @@ import { Plus, Sparkles, Flame, Check, Trash2, X, GripVertical, ArrowUpDown } fr
 import confetti from 'canvas-confetti';
 import type { Habit } from '../../types';
 import { sound } from '../../lib/sound';
+import { getTodayString, getLocalDateString } from '../../lib/dates';
 
 interface HabitTrackerProps {
   habits: Habit[];
@@ -26,14 +27,14 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
   const [selectedEmoji, setSelectedEmoji] = useState('💧');
   const [draggedHabitId, setDraggedHabitId] = useState<string | null>(null);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayString();
 
   // Get last 7 days for the weekly mini grid
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     return {
-      dateStr: d.toISOString().split('T')[0],
+      dateStr: getLocalDateString(d),
       dayLetter: d.toLocaleDateString('pt-BR', { weekday: 'narrow' }).toUpperCase(),
       dayNumber: d.getDate(),
     };

@@ -98,6 +98,33 @@ class SoundEngine {
       // ignore
     }
   }
+
+  // Gentle reminder chime for alerts
+  playAlert() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(659.25, now); // E5
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.12); // A5
+
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.26);
+    } catch {
+      // ignore
+    }
+  }
 }
 
 export const sound = new SoundEngine();

@@ -1,9 +1,10 @@
 import type { Task } from '../types';
+import { sound } from './sound';
+import { getTodayString } from './dates';
 
 export class NotificationManager {
-  // Check if browser supports notifications
   static isSupported(): boolean {
-    return typeof window !== 'undefined' && 'Notification' in window;
+    return 'Notification' in window && 'serviceWorker' in navigator;
   }
 
   // Current permission state
@@ -12,9 +13,8 @@ export class NotificationManager {
     return Notification.permission;
   }
 
-  // Request permission
   static async requestPermission(): Promise<boolean> {
-    if (!this.isSupported()) return false;
+    if (!('Notification' in window)) return false;
     try {
       const permission = await Notification.requestPermission();
       return permission === 'granted';
@@ -23,30 +23,25 @@ export class NotificationManager {
     }
   }
 
-  // Send an instant notification
-  static notify(title: string, body: string, options?: NotificationOptions) {
-    if (!this.isSupported() || Notification.permission !== 'granted') {
-      console.warn('Notificações não autorizadas ou suportadas.');
-      return;
-    }
+  static async notify(title: string, body: string, options?: NotificationOptions) {
+    if (!this.isSupported() || Notification.permission !== 'granted') return;
+
+    sound.playAlert();
+
+    const defaultOptions: NotificationOptions = {
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon.svg',
+      tag: 'planner-alert',
+      ...options,
+    };
 
     try {
-      // Try service worker first for mobile PWA support
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.ready.then((registration) => {
-          registration.showNotification(title, {
-            body,
-            icon: '/icon.svg',
-            badge: '/icon.svg',
-            ...options,
-          });
-        });
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        registration.showNotification(title, defaultOptions);
       } else {
-        new Notification(title, {
-          body,
-          icon: '/icon.svg',
-          ...options,
-        });
+        new Notification(title, defaultOptions);
       }
     } catch (e) {
       console.error('Erro ao disparar notificação:', e);
@@ -57,7 +52,7 @@ export class NotificationManager {
   static checkDailyCutoff(tasks: Task[], cutoffTime: string) {
     if (!this.isSupported() || Notification.permission !== 'granted') return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayString();
     const pendingToday = tasks.filter((t) => t.date === todayStr && !t.completed);
 
     if (pendingToday.length === 0) return;
@@ -91,7 +86,7 @@ export class NotificationManager {
   static checkTaskDeadlines(tasks: Task[]) {
     if (!this.isSupported() || Notification.permission !== 'granted') return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayString();
     const now = new Date();
     const currentHours = now.getHours();
     const currentMinutes = now.getMinutes();

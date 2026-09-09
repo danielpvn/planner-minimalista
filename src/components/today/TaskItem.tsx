@@ -11,6 +11,7 @@ import {
 import confetti from 'canvas-confetti';
 import type { Task } from '../../types';
 import { sound } from '../../lib/sound';
+import { getTodayString } from '../../lib/dates';
 
 interface TaskItemProps {
   task: Task;
@@ -66,7 +67,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   };
 
   // Check if overdue
-  const isToday = task.date === new Date().toISOString().split('T')[0];
+  const isToday = task.date === getTodayString();
   let isOverdue = false;
   if (isToday && task.time && !task.completed) {
     const now = new Date();

@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, Sparkles, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Task } from '../../types';
 import { sound } from '../../lib/sound';
+import { getTodayString } from '../../lib/dates';
 import { NotificationManager } from '../../lib/notifications';
 
 interface FocusTimerProps {
@@ -24,7 +25,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, onCompleteTask })
   const [isActive, setIsActive] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayString();
   const pendingTodayTasks = tasks.filter((t) => t.date === todayStr && !t.completed);
 
   // Switch mode

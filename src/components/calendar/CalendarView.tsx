@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { Task } from '../../types';
 import { TaskItem } from '../today/TaskItem';
+import { getTodayString } from '../../lib/dates';
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -25,9 +26,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onAddTaskForDate,
 }) => {
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
-  const [selectedDateStr, setSelectedDateStr] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [selectedDateStr, setSelectedDateStr] = useState(() => getTodayString());
 
   const year = currentMonthDate.getFullYear();
   const month = currentMonthDate.getMonth(); // 0-indexed
@@ -49,7 +48,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     year: 'numeric',
   });
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayString();
 
   // Tasks for selected date
   const selectedDayTasks = tasks.filter((t) => t.date === selectedDateStr);
