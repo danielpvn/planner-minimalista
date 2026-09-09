@@ -52,7 +52,18 @@ export const AuthServices = {
   async signInWithGoogle() {
     if (!supabaseClient) throw new Error('Supabase não configurado.');
     const isElectron = typeof window !== 'undefined' && ((window as any).electronAPI?.isElectron || window.location.protocol === 'file:');
-    const redirectTo = 'https://plannerm.vercel.app';
+    
+    let redirectTo = 'https://plannerm.vercel.app';
+    if (isElectron && (window as any).electronAPI?.startOAuthServer) {
+      try {
+        const serverInfo = await (window as any).electronAPI.startOAuthServer();
+        if (serverInfo?.callbackUrl) {
+          redirectTo = serverInfo.callbackUrl;
+        }
+      } catch (e) {
+        console.warn('Não foi possível iniciar servidor OAuth local:', e);
+      }
+    }
 
     const res = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
@@ -70,6 +81,11 @@ export const AuthServices = {
       }
     }
     return res;
+  },
+
+  async setSession(tokens: { access_token: string; refresh_token: string }) {
+    if (!supabaseClient) throw new Error('Supabase não configurado.');
+    return await supabaseClient.auth.setSession(tokens);
   },
 
   async signOut() {

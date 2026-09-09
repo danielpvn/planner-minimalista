@@ -1,11 +1,152 @@
 const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, dialog, shell, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+
+let authServer = null;
 
 ipcMain.on('open-external', (_event, url) => {
   if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
     shell.openExternal(url);
   }
+});
+
+ipcMain.handle('start-local-oauth-server', async () => {
+  if (authServer) {
+    try { authServer.close(); } catch {}
+    authServer = null;
+  }
+
+  return new Promise((resolve) => {
+    const server = http.createServer((req, res) => {
+      const parsedUrl = new URL(req.url, 'http://127.0.0.1');
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(200, {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        });
+        res.end();
+        return;
+      }
+
+      if (parsedUrl.pathname === '/callback') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plannerm — Login Autorizado</title>
+  <style>
+    body {
+      margin: 0; padding: 0; background: #090a0f; color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+    }
+    .box {
+      background: #12141d; border: 1px solid #232638; border-radius: 28px;
+      padding: 48px 36px; text-align: center; max-width: 420px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+      animation: pop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes pop {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .icon {
+      width: 64px; height: 64px; border-radius: 20px;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; margin: 0 auto 24px;
+      box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+    }
+    h1 { margin: 0 0 10px; font-size: 22px; font-weight: 700; }
+    p { margin: 0 0 24px; font-size: 14px; color: #94a3b8; line-height: 1.6; }
+    .badge {
+      display: inline-block; padding: 6px 16px; border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399; font-size: 12px; font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="icon">✨</div>
+    <h1>Login Concluído!</h1>
+    <p>Sua conta Google foi autorizada com sucesso. Você já pode fechar esta aba e voltar para o seu <b>Plannerm</b> no computador.</p>
+    <div class="badge">✓ Autorizado com Sucesso</div>
+  </div>
+  <script>
+    const hash = window.location.hash.substring(1);
+    const search = window.location.search.substring(1);
+    const params = new URLSearchParams(hash || search);
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    
+    if (access_token && refresh_token) {
+      fetch('/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token, refresh_token })
+      }).catch(() => {});
+    }
+  </script>
+</body>
+</html>`);
+        return;
+      }
+
+      if (parsedUrl.pathname === '/token' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({ success: true }));
+
+          try {
+            const tokenData = JSON.parse(body);
+            if (mainWindow) {
+              if (mainWindow.isMinimized()) mainWindow.restore();
+              mainWindow.show();
+              mainWindow.focus();
+              mainWindow.webContents.send('oauth-token-received', tokenData);
+            }
+          } catch (e) {
+            console.error('Falha ao processar token:', e);
+          }
+
+          setTimeout(() => {
+            if (authServer) {
+              try { authServer.close(); } catch {}
+              authServer = null;
+            }
+          }, 3000);
+        });
+        return;
+      }
+
+      res.writeHead(404);
+      res.end();
+    });
+
+    server.listen(54321, '127.0.0.1', () => {
+      authServer = server;
+      resolve({ port: 54321, callbackUrl: 'http://127.0.0.1:54321/callback' });
+    });
+
+    server.on('error', () => {
+      server.listen(0, '127.0.0.1', () => {
+        authServer = server;
+        const port = server.address().port;
+        resolve({ port, callbackUrl: `http://127.0.0.1:${port}/callback` });
+      });
+    });
+  });
 });
 
 let autoUpdater = null;

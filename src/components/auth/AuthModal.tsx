@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Mail, 
@@ -6,7 +6,8 @@ import {
   Sparkles, 
   ArrowRight, 
   CheckCircle2, 
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react';
 import { AuthServices } from '../../lib/supabase';
 
@@ -25,8 +26,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [waitingBrowser, setWaitingBrowser] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Listen for local desktop loopback token arrival
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.onOAuthTokens) {
+      const unsubscribe = (window as any).electronAPI.onOAuthTokens(async (tokens: any) => {
+        if (tokens?.access_token && tokens?.refresh_token) {
+          try {
+            setLoading(true);
+            setWaitingBrowser(false);
+            const { data, error } = await AuthServices.setSession(tokens);
+            if (error) throw error;
+            if (data?.user) {
+              onAuthSuccess(data.user);
+              onClose();
+            }
+          } catch (err: any) {
+            setErrorMsg(err.message || 'Falha ao autenticar com as credenciais recebidas.');
+          } finally {
+            setLoading(false);
+          }
+        }
+      });
+      return () => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      };
+    }
+  }, [onAuthSuccess, onClose]);
 
   if (!isOpen) return null;
 
@@ -75,15 +104,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
     setErrorMsg(null);
     try {
+      const isElectron = typeof window !== 'undefined' && ((window as any).electronAPI?.isElectron || window.location.protocol === 'file:');
+      if (isElectron) {
+        setWaitingBrowser(true);
+      }
       const { error } = await AuthServices.signInWithGoogle();
       if (error) {
+        setWaitingBrowser(false);
         if (error.message?.includes('provider') || error.message?.includes('disabled') || error.message?.includes('not enabled')) {
           throw new Error('O login com Google precisa ser ativado em: Supabase > Authentication > Providers. Você já pode criar sua conta por E-mail e Senha ou Link Mágico logo abaixo!');
         }
         throw error;
       }
     } catch (err: any) {
+      setWaitingBrowser(false);
       setErrorMsg(err.message || 'Falha ao autenticar com Google. Tente entrar com E-mail ou Link Mágico.');
+    } finally {
       setLoading(false);
     }
   };
@@ -177,8 +213,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="button"
             onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-surface-hover hover:bg-muted border border-surface-border text-foreground text-xs font-semibold transition-all shadow-sm active:scale-95"
+            disabled={loading || waitingBrowser}
+            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-surface-hover hover:bg-muted border border-surface-border text-foreground text-xs font-semibold transition-all shadow-sm active:scale-95 disabled:opacity-70"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
@@ -198,8 +234,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.3L1.6 16c1.9 3.8 5.8 7 10.4 7z"
               />
             </svg>
-            <span>Continuar com Google</span>
+            <span>{waitingBrowser ? 'Aguardando login no navegador...' : 'Continuar com Google'}</span>
           </button>
+
+          {waitingBrowser && (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-accent-soft border border-accent/30 text-accent-text text-xs animate-fade-in">
+              <ExternalLink className="w-4 h-4 shrink-0 mt-0.5 animate-pulse" />
+              <div>
+                <p className="font-semibold text-foreground">Abrimos o Google no seu navegador!</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Conclua a autorização no navegador. O Plannerm será liberado e logado automaticamente aqui.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-3 my-2">
             <div className="flex-1 h-px bg-surface-border" />
